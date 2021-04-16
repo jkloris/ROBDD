@@ -12,30 +12,41 @@ typedef struct node{
 
 }NODE;
 
-NODE* buildBDD(NODE** parent, char* bool, int lvl, NODE** hashtable);
+NODE* buildBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero);
 int getResult(NODE** parent, char* bool);
 int getHash(void* ptr);
 NODE** init(char* bool);
+void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl);
+int findHashIndex(NODE* node, NODE** hashtable, int lvl, int h_size);
 
 int main() {
 
-	int one=1,zero=0;
+	int i, one=1,zero=0;
 
 	
 
 	NODE** hashtable = init("10110010");
+
 	NODE* start = malloc(sizeof(NODE));
 
-	buildBDD(start, "10110010", 0, &hashtable, &one, &zero);
+	start = buildBDD(start, "10110010", 0, &hashtable, &one, &zero);
 
+
+	printf("ds");
 	return 0;
 }
 
 NODE** init(char* bool) {
-	int log = log2(strlen(bool));
+	int i, o, p, log = log2(strlen(bool));
+	
 	NODE** hashtable = malloc(sizeof(NODE*) * log);
-	for (int i = 0; i < log; i++) {
-		hashtable[i] = NULL;
+	for (i = 0; i < log; i++) {
+		p = pow(2, i);
+		hashtable[i] = malloc(sizeof(NODE) * p);
+
+		for (o = 0; o < p; o++) {
+			hashtable[i][o].lvl = -1;
+		}
 	}
 	return hashtable;
 }
@@ -80,15 +91,41 @@ int getHash(void* ptr){
 	return -1;
 }
 
-NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE**hashtable, int *one, int *zero) {
+int findHashIndex(NODE* node, NODE** hashtable, int lvl, int h_size) {
+	int h = getHash(node) % h_size;
+
+	printf("%d %d\n", lvl, h);
+	while (hashtable[lvl][h].lvl == -1) {
+		if (hashtable[lvl][h].left == node->left && hashtable[lvl][h].right == node->right)
+			return -1;
+
+		h = h + 1 / h_size;
+	}
+	return h;
+}
+
+void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl) {
+	
+	(*hashtable)[lvl][h].parent = node->parent;
+	(*hashtable)[lvl][h].right = node->right;
+	(*hashtable)[lvl][h].left = node->left;
+	(*hashtable)[lvl][h].true = node->true;
+	(*hashtable)[lvl][h].false = node->false;
+	(*hashtable)[lvl][h].lvl = node->lvl;
+
+}
+
+NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, int *zero) {
 	int h, h_size = pow(2, lvl);
 	
-	if (hashtable[lvl]== NULL) {
+	/*if ((*hashtable)[lvl]== NULL) {
 		
-		hashtable[lvl] = malloc(sizeof(NODE)*h_size);
-	}
+		(*hashtable)[lvl] = malloc(sizeof(NODE)*h_size);
+		for (int i = 0; i < h_size; i++) {
+			(*hashtable)[lvl][i].lvl = -1;
+		}
+	}*/
 
-	hashtable[lvl][0].false = one;
 
 	if (strlen(bool) > 2) {
 		NODE* kid1 = malloc(sizeof(NODE));
@@ -120,8 +157,17 @@ NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE**hashtable, int *one, int
 				parent->parent->left = parent->right;
 		}
 		else {
-			h = getHash(parent->right) / h_size;
-			//prida do hashtable
+			
+			h = findHashIndex(parent, hashtable, lvl, h_size);
+			if (h != -1)
+				hashInsert(parent, &hashtable,h, lvl);
+			else {
+				parent->right->parent = parent->parent;
+				if (parent->parent->right == parent)
+					parent->parent->right = parent->right;
+				else
+					parent->parent->left = parent->right;
+			}
 		}
 
 		
