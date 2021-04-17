@@ -26,9 +26,14 @@ int main() {
 	
 
 	NODE** hashtable = init("10110010");
+	NODE* a, * b, * c, * d;
+	a = hashtable[0];
+	b = hashtable[1];
+	c = hashtable[2];
+	
 
 	NODE* start = malloc(sizeof(NODE));
-
+	
 	start = buildBDD(start, "10110010", 0, &hashtable, &one, &zero);
 
 
@@ -40,6 +45,7 @@ NODE** init(char* bool) {
 	int i, o, p, log = log2(strlen(bool));
 	
 	NODE** hashtable = malloc(sizeof(NODE*) * log);
+
 	for (i = 0; i < log; i++) {
 		p = pow(2, i);
 		hashtable[i] = malloc(sizeof(NODE) * p);
@@ -48,6 +54,8 @@ NODE** init(char* bool) {
 			hashtable[i][o].lvl = -1;
 		}
 	}
+
+
 	return hashtable;
 }
 
@@ -93,6 +101,7 @@ int getHash(void* ptr){
 
 int findHashIndex(NODE* node, NODE** hashtable, int lvl, int h_size) {
 	int h = getHash(node) % h_size;
+	
 
 	printf("%d %d\n", lvl, h);
 	while (hashtable[lvl][h].lvl == -1) {
@@ -117,7 +126,9 @@ void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl) {
 
 NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, int *zero) {
 	int h, h_size = pow(2, lvl);
+	parent->lvl = lvl;
 	
+	//(*hashtable)[0][0].lvl = 21;
 	/*if ((*hashtable)[lvl]== NULL) {
 		
 		(*hashtable)[lvl] = malloc(sizeof(NODE)*h_size);
@@ -130,8 +141,8 @@ NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, in
 	if (strlen(bool) > 2) {
 		NODE* kid1 = malloc(sizeof(NODE));
 		NODE* kid2 = malloc(sizeof(NODE));
-		kid1->lvl = lvl;
-		kid2->lvl = lvl;
+		/*kid1->lvl = lvl+1;
+		kid2->lvl = lvl+1;*/
 		kid1->parent = parent;
 		kid2->parent = parent;
 		/*kid1->false = NULL;
@@ -145,8 +156,8 @@ NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, in
 		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
 		s2[strlen(bool) / 2] = '\0';
 		
-		parent->right = buildBDD(kid1, s1, lvl+1, &hashtable, one, zero);
-		parent->left = buildBDD(kid2, s2, lvl+1, &hashtable, one, zero);
+		parent->right = buildBDD(kid1, s1, lvl+1, hashtable, one, zero);
+		parent->left = buildBDD(kid2, s2, lvl+1, hashtable, one, zero);
 		
 		if (parent->right == parent->left) {
 			//zmaze a rodic parenta bude ukazovat na dieta 
@@ -158,9 +169,9 @@ NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, in
 		}
 		else {
 			
-			h = findHashIndex(parent, hashtable, lvl, h_size);
+			h = findHashIndex(parent, &hashtable, lvl, h_size);
 			if (h != -1)
-				hashInsert(parent, &hashtable,h, lvl);
+				hashInsert(parent, hashtable,h, lvl);
 			else {
 				parent->right->parent = parent->parent;
 				if (parent->parent->right == parent)
