@@ -12,7 +12,7 @@ typedef struct node{
 
 }NODE;
 
-NODE* buildBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero);
+NODE* buildBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side);
 int getResult(NODE** parent, char* bool);
 int getHash(void* ptr);
 NODE** init(char* bool);
@@ -31,7 +31,7 @@ int main() {
 
 	NODE* start = malloc(sizeof(NODE));
 	
-	start = buildBDD(start, "10110010", 0, &hashtable, &one, &zero);
+	start = buildBDD(start, "11110000", 0, &hashtable, &one, &zero, NULL);
 	a = start->left;
 	b = a->left;
 	c = b->left;
@@ -124,10 +124,10 @@ void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl) {
 }
 
 //tmp test
-NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero) {
+NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side) {
 	int h, h_size = pow(2, lvl);
 	parent->lvl = lvl;
-
+	NODE* buf;
 
 
 	if (strlen(bool) > 2) {
@@ -144,17 +144,21 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
 		s2[strlen(bool) / 2] = '\0';
 
-		parent->right = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero);
-		parent->left = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero);
+		parent->right = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
+		parent->left = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
 
-		//if (parent->right == parent->left) {
-		//	//zmaze a rodic parenta bude ukazovat na dieta 
-		//	//parent->right->parent = parent->parent;###############
-		//	if (parent->parent->right == parent)
-		//		parent->parent->right = parent->right;
-		//	else
-		//		parent->parent->left = parent->right;
-		//}
+		if (parent->right == parent->left) {
+			//zmaze a rodic parenta bude ukazovat na dieta 
+			//parent->right->parent = parent->parent;############### vvv sub vvv
+			buf = parent->right;
+			buf->parent = parent->parent;
+
+			return parent->right;
+			/*if (side == 'R')
+				parent->parent->right = parent->right;
+			else
+				parent->parent->left = parent->right;*/
+		}
 		//else {
 
 		//	h = findHashIndex(parent, &hashtable, lvl, h_size);
@@ -199,6 +203,12 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 			//kid->true = one;
 			kid->right = one;
 		}
+
+		if (kid->right == kid->left) {
+			
+			return kid->right;
+		}
+
 
 		return kid;
 	}
