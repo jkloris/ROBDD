@@ -3,11 +3,11 @@
 #include <math.h>
 
 typedef struct node{
-	struct node* left;
-	struct node* right;
+	void* left;
+	void* right;
 	struct node* parent;
-	int *false;
-	int *true;
+	/*int *false;
+	int *true;*/
 	int lvl;
 
 }NODE;
@@ -27,15 +27,14 @@ int main() {
 
 	NODE** hashtable = init("10110010");
 	NODE* a, * b, * c, * d;
-	a = hashtable[0];
-	b = hashtable[1];
-	c = hashtable[2];
 	
 
 	NODE* start = malloc(sizeof(NODE));
 	
 	start = buildBDD(start, "10110010", 0, &hashtable, &one, &zero);
-
+	a = start->left;
+	b = a->left;
+	c = b->left;
 
 	printf("ds");
 	return 0;
@@ -118,70 +117,59 @@ void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl) {
 	(*hashtable)[lvl][h].parent = node->parent;
 	(*hashtable)[lvl][h].right = node->right;
 	(*hashtable)[lvl][h].left = node->left;
-	(*hashtable)[lvl][h].true = node->true;
-	(*hashtable)[lvl][h].false = node->false;
+	//(*hashtable)[lvl][h].true = node->true;
+	//(*hashtable)[lvl][h].false = node->false;
 	(*hashtable)[lvl][h].lvl = node->lvl;
 
 }
 
-NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, int *zero) {
+//tmp test
+NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero) {
 	int h, h_size = pow(2, lvl);
 	parent->lvl = lvl;
-	
-	//(*hashtable)[0][0].lvl = 21;
-	/*if ((*hashtable)[lvl]== NULL) {
-		
-		(*hashtable)[lvl] = malloc(sizeof(NODE)*h_size);
-		for (int i = 0; i < h_size; i++) {
-			(*hashtable)[lvl][i].lvl = -1;
-		}
-	}*/
+
 
 
 	if (strlen(bool) > 2) {
 		NODE* kid1 = malloc(sizeof(NODE));
 		NODE* kid2 = malloc(sizeof(NODE));
-		/*kid1->lvl = lvl+1;
-		kid2->lvl = lvl+1;*/
+	
 		kid1->parent = parent;
 		kid2->parent = parent;
-		/*kid1->false = NULL;
-		kid1->true = NULL;
-		kid2->false = NULL;
-		kid2->true = NULL;*/
+	
 
 		char s1[100000], s2[100000];
 		strncpy(s1, bool, strlen(bool) / 2);
 		s1[strlen(bool) / 2] = '\0';
 		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
 		s2[strlen(bool) / 2] = '\0';
-		
-		parent->right = buildBDD(kid1, s1, lvl+1, hashtable, one, zero);
-		parent->left = buildBDD(kid2, s2, lvl+1, hashtable, one, zero);
-		
-		if (parent->right == parent->left) {
-			//zmaze a rodic parenta bude ukazovat na dieta 
-			parent->right->parent = parent->parent;
-			if (parent->parent->right == parent)
-				parent->parent->right = parent->right;
-			else
-				parent->parent->left = parent->right;
-		}
-		else {
-			
-			h = findHashIndex(parent, &hashtable, lvl, h_size);
-			if (h != -1)
-				hashInsert(parent, hashtable,h, lvl);
-			else {
-				parent->right->parent = parent->parent;
-				if (parent->parent->right == parent)
-					parent->parent->right = parent->right;
-				else
-					parent->parent->left = parent->right;
-			}
-		}
 
-		
+		parent->right = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero);
+		parent->left = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero);
+
+		//if (parent->right == parent->left) {
+		//	//zmaze a rodic parenta bude ukazovat na dieta 
+		//	//parent->right->parent = parent->parent;###############
+		//	if (parent->parent->right == parent)
+		//		parent->parent->right = parent->right;
+		//	else
+		//		parent->parent->left = parent->right;
+		//}
+		//else {
+
+		//	h = findHashIndex(parent, &hashtable, lvl, h_size);
+		//	if (h != -1)
+		//		hashInsert(parent, hashtable, h, lvl);
+		//	else {
+		//		//parent->right->parent = parent->parent;###############
+		//		if (parent->parent->right == parent)
+		//			parent->parent->right = parent->right;
+		//		else
+		//			parent->parent->left = parent->right;
+		//	}
+		//}
+
+
 		return parent;
 	}
 	else {
@@ -191,25 +179,118 @@ NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, in
 		kid->parent = parent;
 		/*kid->left = NULL;
 		kid->right = NULL;*/
-		
+
 		//[0] je nalavo cize false
 		if (bool[0] == '0') {
-			kid->false = zero;
+			//kid->false = zero;
+			kid->left = zero;
 		}
 		else {
-			kid->false = one;
+			//kid->false = one;
+			kid->left = one;
 		}
 
 		//[1] je napravo cize true
-		if (bool[1] == '0') { 
-			kid->true = zero;
+		if (bool[1] == '0') {
+			//kid->true = zero;
+			kid->right = zero;
 		}
 		else {
-			kid->true = one;
+			//kid->true = one;
+			kid->right = one;
 		}
 
 		return kid;
 	}
 
 }
+
+//NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, int *zero) {
+//	int h, h_size = pow(2, lvl);
+//	parent->lvl = lvl;
+//	
+//	//(*hashtable)[0][0].lvl = 21;
+//	/*if ((*hashtable)[lvl]== NULL) {
+//		
+//		(*hashtable)[lvl] = malloc(sizeof(NODE)*h_size);
+//		for (int i = 0; i < h_size; i++) {
+//			(*hashtable)[lvl][i].lvl = -1;
+//		}
+//	}*/
+//
+//
+//	if (strlen(bool) > 2) {
+//		NODE* kid1 = malloc(sizeof(NODE));
+//		NODE* kid2 = malloc(sizeof(NODE));
+//		/*kid1->lvl = lvl+1;
+//		kid2->lvl = lvl+1;*/
+//		kid1->parent = parent;
+//		kid2->parent = parent;
+//		/*kid1->false = NULL;
+//		kid1->true = NULL;
+//		kid2->false = NULL;
+//		kid2->true = NULL;*/
+//
+//		char s1[100000], s2[100000];
+//		strncpy(s1, bool, strlen(bool) / 2);
+//		s1[strlen(bool) / 2] = '\0';
+//		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
+//		s2[strlen(bool) / 2] = '\0';
+//		
+//		parent->right = buildBDD(kid1, s1, lvl+1, hashtable, one, zero);
+//		parent->left = buildBDD(kid2, s2, lvl+1, hashtable, one, zero);
+//		
+//		if (parent->right == parent->left) {
+//			//zmaze a rodic parenta bude ukazovat na dieta 
+//			parent->right->parent = parent->parent;
+//			if (parent->parent->right == parent)
+//				parent->parent->right = parent->right;
+//			else
+//				parent->parent->left = parent->right;
+//		}
+//		else {
+//			
+//			h = findHashIndex(parent, &hashtable, lvl, h_size);
+//			if (h != -1)
+//				hashInsert(parent, hashtable,h, lvl);
+//			else {
+//				parent->right->parent = parent->parent;
+//				if (parent->parent->right == parent)
+//					parent->parent->right = parent->right;
+//				else
+//					parent->parent->left = parent->right;
+//			}
+//		}
+//
+//		
+//		return parent;
+//	}
+//	else {
+//		//TODO
+//		NODE* kid = malloc(sizeof(NODE));
+//		kid->lvl = lvl;
+//		kid->parent = parent;
+//		/*kid->left = NULL;
+//		kid->right = NULL;*/
+//		
+//		//[0] je nalavo cize false
+//		if (bool[0] == '0') {
+//			kid->false = zero;
+//		}
+//		else {
+//			kid->false = one;
+//		}
+//
+//		//[1] je napravo cize true
+//		if (bool[1] == '0') { 
+//			kid->true = zero;
+//		}
+//		else {
+//			kid->true = one;
+//		}
+//
+//		return kid;
+//	}
+//
+//}
 
