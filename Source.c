@@ -21,7 +21,7 @@ int findHashIndex(NODE* node, NODE** hashtable, int lvl, int h_size);
 
 int main() {
 
-	int i, one=1,zero=0;
+	int i, one=1,zero=0, *buf;
 
 	
 
@@ -31,10 +31,11 @@ int main() {
 
 	NODE* start = malloc(sizeof(NODE));
 	
-	start = buildBDD(start, "11110000", 0, &hashtable, &one, &zero, NULL);
+	start = buildBDD(start, "00100100", 0, &hashtable, &one, &zero, NULL);
 	a = start->left;
-	b = a->left;
-
+	b = start->right;
+	
+	getResult(hashtable[0], "1111");
 
 	printf("ds");
 	return 0;
@@ -58,29 +59,21 @@ NODE** init(char* bool) {
 	return hashtable;
 }
 
-int getResult(NODE** parent, char* bool) {
-	
+int getResult(NODE* parent, char* bool) {
+	int *x;
 
-	/*if (strlen(bool) == 1) {
-		if (bool[0] == '0') {
-			return parent->false;
-		}
-		else {
-			return parent->true;
-		}
-	}
-
-	char s[100000];
-	strncpy(s, bool + 1, strlen(bool));
-	s[strlen(bool) - 1] = '\0';
-
-	if (bool[0]=='0') {
-		return getResult(parent->left, s);
+	if (bool[parent->lvl] == '1') {
+		x = parent->right;
+		if (*x == 1 || *x == 0)
+			return *x;
 	}
 	else {
-		return getResult(parent->right, s);
-	}*/
-
+		x = parent->left;
+		if (*x == 1 || *x == 0)
+			return *x;
+	}
+	
+	getResult(x, bool);
 }
 
 int getHash(void* ptr){
@@ -100,7 +93,10 @@ int getHash(void* ptr){
 
 int findHashIndex(NODE* node, NODE** hashtable, int lvl, int h_size) {
 	int h = getHash(node) % h_size;
-	
+	if (h == -1) {
+		printf("NULL pointer in hash\n");
+		return -2;
+	}
 
 	printf("%d %d\n", lvl, h);
 	while (hashtable[lvl][h].lvl == -1) {
@@ -149,11 +145,14 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 
 		if (parent->right == parent->left) {
 			//zmaze a rodic parenta bude ukazovat na dieta 
-			//parent->right->parent = parent->parent;############### vvv sub vvv
-
+	
 			if (parent->right != one && parent->right != zero) {
 				buf = parent->right;
 				buf->parent = parent->parent;
+			}
+
+			if (lvl == 0) {
+				hashInsert(parent, hashtable, 0, lvl);
 			}
 
 			return parent->right;
@@ -164,16 +163,18 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		}
 		else {
 
-			//h = findhashindex(parent, &hashtable, lvl, h_size);
-			//if (h != -1)
-			//	hashinsert(parent, hashtable, h, lvl);
-			//else {
-			//	//parent->right->parent = parent->parent;###############
-			//	if (parent->parent->right == parent)
-			//		parent->parent->right = parent->right;
-			//	else
-			//		parent->parent->left = parent->right;
-			//}
+			h = findHashIndex(parent, &hashtable, lvl, h_size);
+
+			if (h != -1)
+				hashInsert(parent, hashtable, h, lvl);
+			else {
+				printf("-1\n");
+				//parent->right->parent = parent->parent;###############
+				/*if (parent->parent->right == parent)
+					parent->parent->right = parent->right;
+				else
+					parent->parent->left = parent->right;*/
+			}
 		}
 
 
