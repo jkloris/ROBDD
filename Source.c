@@ -34,7 +34,7 @@ int main() {
 	start = buildBDD(start, "11110000", 0, &hashtable, &one, &zero, NULL);
 	a = start->left;
 	b = a->left;
-	c = b->left;
+
 
 	printf("ds");
 	return 0;
@@ -150,8 +150,11 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		if (parent->right == parent->left) {
 			//zmaze a rodic parenta bude ukazovat na dieta 
 			//parent->right->parent = parent->parent;############### vvv sub vvv
-			buf = parent->right;
-			buf->parent = parent->parent;
+
+			if (parent->right != one && parent->right != zero) {
+				buf = parent->right;
+				buf->parent = parent->parent;
+			}
 
 			return parent->right;
 			/*if (side == 'R')
@@ -159,19 +162,19 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 			else
 				parent->parent->left = parent->right;*/
 		}
-		//else {
+		else {
 
-		//	h = findHashIndex(parent, &hashtable, lvl, h_size);
-		//	if (h != -1)
-		//		hashInsert(parent, hashtable, h, lvl);
-		//	else {
-		//		//parent->right->parent = parent->parent;###############
-		//		if (parent->parent->right == parent)
-		//			parent->parent->right = parent->right;
-		//		else
-		//			parent->parent->left = parent->right;
-		//	}
-		//}
+			//h = findhashindex(parent, &hashtable, lvl, h_size);
+			//if (h != -1)
+			//	hashinsert(parent, hashtable, h, lvl);
+			//else {
+			//	//parent->right->parent = parent->parent;###############
+			//	if (parent->parent->right == parent)
+			//		parent->parent->right = parent->right;
+			//	else
+			//		parent->parent->left = parent->right;
+			//}
+		}
 
 
 		return parent;
