@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#define BUFF_STRINGSIZE 100000
 
 typedef struct node{
 	void* left;
@@ -17,7 +18,7 @@ int getResult(NODE** parent, char* bool);
 int getHash(void* ptr);
 NODE** init(char* bool);
 void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl);
-int findHashIndex(NODE* node, NODE** hashtable, int lvl, int h_size);
+int findHashIndex(NODE* node, NODE*** hashtable, int lvl, int h_size, int *flag);
 
 int main() {
 
@@ -25,13 +26,13 @@ int main() {
 
 	
 
-	NODE** hashtable = init("10110010");
+	NODE** hashtable = init("00001111");
 	NODE* a, * b, * c, * d;
 	
 
 	NODE* start = malloc(sizeof(NODE));
 	
-	start = buildBDD(start, "00100100", 0, &hashtable, &one, &zero, NULL);
+	start = buildBDD(start, "10100101", 0, &hashtable, &one, &zero, NULL);
 	a = start->left;
 	b = start->right;
 	
@@ -91,19 +92,23 @@ int getHash(void* ptr){
 	return -1;
 }
 
-int findHashIndex(NODE* node, NODE** hashtable, int lvl, int h_size) {
-	int h = getHash(node) % h_size;
+int findHashIndex(NODE* node, NODE*** hashtable, int lvl, int h_size, int *flag) {
+	
+	int h = (getHash(node->left)>>1 + getHash(node->right)) % h_size;
 	if (h == -1) {
 		printf("NULL pointer in hash\n");
 		return -2;
 	}
+	NODE a = (*hashtable)[lvl][h];
 
-	printf("%d %d\n", lvl, h);
-	while (hashtable[lvl][h].lvl == -1) {
-		if (hashtable[lvl][h].left == node->left && hashtable[lvl][h].right == node->right)
+	printf("%d %d\n", (*hashtable)[lvl][h].lvl, a.lvl);
+	while ((*hashtable)[lvl][h].lvl != -1) {
+		if ((*hashtable)[lvl][h].left == node->left && (*hashtable)[lvl][h].right == node->right) {
+			*flag = h;
 			return -1;
+		}
 
-		h = h + 1 / h_size;
+		h = h + 1 % h_size;
 	}
 	return h;
 }
@@ -121,7 +126,7 @@ void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl) {
 
 //tmp test
 NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side) {
-	int h, h_size = pow(2, lvl);
+	int h, h_size = pow(2, lvl), flag ;
 	parent->lvl = lvl;
 	NODE* buf;
 
@@ -134,7 +139,7 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		kid2->parent = parent;
 	
 
-		char s1[100000], s2[100000];
+		char s1[BUFF_STRINGSIZE], s2[BUFF_STRINGSIZE];
 		strncpy(s1, bool, strlen(bool) / 2);
 		s1[strlen(bool) / 2] = '\0';
 		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
@@ -150,61 +155,52 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 				buf = parent->right;
 				buf->parent = parent->parent;
 			}
-
+			//ak je to uplne prvy pointer, tak tam musi nieco vlozit, aby to nebolo prazde aj ked je to redukovane na 0
 			if (lvl == 0) {
 				hashInsert(parent, hashtable, 0, lvl);
 			}
 
 			return parent->right;
-			/*if (side == 'R')
-				parent->parent->right = parent->right;
-			else
-				parent->parent->left = parent->right;*/
+			
 		}
 		else {
+			flag = 1;
+			h = findHashIndex(parent, hashtable, lvl, h_size, &flag);
 
-			h = findHashIndex(parent, &hashtable, lvl, h_size);
-
-			if (h != -1)
+			//takyto prvok v zozname nie je
+			if (h != -1) {
 				hashInsert(parent, hashtable, h, lvl);
-			else {
-				printf("-1\n");
-				//parent->right->parent = parent->parent;###############
-				/*if (parent->parent->right == parent)
-					parent->parent->right = parent->right;
-				else
-					parent->parent->left = parent->right;*/
+
+				return &(*hashtable)[lvl][h];
 			}
+
+			return &(*hashtable)[lvl][flag];
 		}
 
 
-		return parent;
+		//return parent;
 	}
 	else {
-		//TODO
+		//vytvorenie a redukovanie prvkov na poslednej urovni
+
 		NODE* kid = malloc(sizeof(NODE));
 		kid->lvl = lvl;
 		kid->parent = parent;
-		/*kid->left = NULL;
-		kid->right = NULL;*/
+	
 
 		//[0] je nalavo cize false
 		if (bool[0] == '0') {
-			//kid->false = zero;
 			kid->left = zero;
 		}
 		else {
-			//kid->false = one;
 			kid->left = one;
 		}
 
 		//[1] je napravo cize true
 		if (bool[1] == '0') {
-			//kid->true = zero;
 			kid->right = zero;
 		}
 		else {
-			//kid->true = one;
 			kid->right = one;
 		}
 
@@ -212,9 +208,20 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 			
 			return kid->right;
 		}
+		
+		flag = 1;
+		h = findHashIndex(kid, hashtable, lvl, h_size, &flag);
+		
+		//takyto prvok v zozname nie je
+		if (h != -1) {
+			hashInsert(kid, hashtable, h, lvl);
 
+			return &(*hashtable)[lvl][h];
+		}
 
-		return kid;
+		return &(*hashtable)[lvl][flag];
+
+		
 	}
 
 }
