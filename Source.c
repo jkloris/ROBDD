@@ -11,35 +11,59 @@ typedef struct node{
 	int *true;*/
 	int lvl;
 
+	//na testy
+	int visit;
+
 }NODE;
 
 NODE* buildBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side);
+NODE* buildROBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side);
 int getResult(NODE** parent, char* bool);
 int getHash(void* ptr);
 NODE** init(char* bool);
 void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl);
 int findHashIndex(NODE* node, NODE*** hashtable, int lvl, int h_size, int *flag);
+int getNodesCount(NODE* start);
 
 int main() {
 
-	int i, one=1,zero=0, *buf;
+	int i, one=1,zero=0, *buf, *bas;
+	bas = &one;
 
 	
 
-	NODE** hashtable = init("00001111");
+	NODE** hashtable = init("0000111110011001");
 	NODE* a, * b, * c, * d;
 	
 
 	NODE* start = malloc(sizeof(NODE));
-	
-	start = buildBDD(start, "10100101", 0, &hashtable, &one, &zero, NULL);
+	NODE* BDDstart = malloc(sizeof(NODE));
+	BDDstart = buildBDD(BDDstart, "1111000111111001", 0, &hashtable, &one, &zero, NULL);
+	start = buildROBDD(start, "1111000111111001", 0, &hashtable, &one, &zero, NULL);
 	a = start->left;
 	b = start->right;
 	
-	getResult(hashtable[0], "1111");
+	printf("pocet buniek: %d\n",  getNodesCount(hashtable[0]));
+	printf("pocet buniek: %d\n",  getNodesCount(BDDstart));
+
+
+	//getResult(hashtable[0], "1111");
 
 	printf("ds");
 	return 0;
+}
+
+int getNodesCount(NODE* start) {
+
+	if (start->visit == 1)
+		return 0;
+	
+	int* p = start;
+	if (*p == 1 || *p == 0)
+		return 0;
+
+	start->visit = 1;
+	return getNodesCount(start->left) + getNodesCount(start->right) + 1;
 }
 
 NODE** init(char* bool) {
@@ -124,8 +148,8 @@ void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl) {
 
 }
 
-//tmp test
-NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side) {
+
+NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side) {
 	int h, h_size = pow(2, lvl), flag ;
 	parent->lvl = lvl;
 	NODE* buf;
@@ -137,7 +161,8 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 	
 		kid1->parent = parent;
 		kid2->parent = parent;
-	
+		kid1->visit = 0;
+		kid2->visit = 0;
 
 		char s1[BUFF_STRINGSIZE], s2[BUFF_STRINGSIZE];
 		strncpy(s1, bool, strlen(bool) / 2);
@@ -145,15 +170,17 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
 		s2[strlen(bool) / 2] = '\0';
 
-		parent->right = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
-		parent->left = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
+		parent->right = buildROBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
+		parent->left = buildROBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
 
 		if (parent->right == parent->left) {
 			//zmaze a rodic parenta bude ukazovat na dieta 
 	
 			if (parent->right != one && parent->right != zero) {
 				buf = parent->right;
-				buf->parent = parent->parent;
+				//buf->parent = parent->parent;
+				parent->right = buf->right;
+				parent->left = buf->left;
 			}
 			//ak je to uplne prvy pointer, tak tam musi nieco vlozit, aby to nebolo prazde aj ked je to redukovane na 0
 			if (lvl == 0) {
@@ -186,6 +213,8 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		NODE* kid = malloc(sizeof(NODE));
 		kid->lvl = lvl;
 		kid->parent = parent;
+
+		kid->visit = 0;
 	
 
 		//[0] je nalavo cize false
@@ -226,92 +255,62 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 
 }
 
-//NODE* buildBDD(NODE *parent, char* bool, int lvl, NODE***hashtable, int *one, int *zero) {
-//	int h, h_size = pow(2, lvl);
-//	parent->lvl = lvl;
-//	
-//	//(*hashtable)[0][0].lvl = 21;
-//	/*if ((*hashtable)[lvl]== NULL) {
-//		
-//		(*hashtable)[lvl] = malloc(sizeof(NODE)*h_size);
-//		for (int i = 0; i < h_size; i++) {
-//			(*hashtable)[lvl][i].lvl = -1;
-//		}
-//	}*/
-//
-//
-//	if (strlen(bool) > 2) {
-//		NODE* kid1 = malloc(sizeof(NODE));
-//		NODE* kid2 = malloc(sizeof(NODE));
-//		/*kid1->lvl = lvl+1;
-//		kid2->lvl = lvl+1;*/
-//		kid1->parent = parent;
-//		kid2->parent = parent;
-//		/*kid1->false = NULL;
-//		kid1->true = NULL;
-//		kid2->false = NULL;
-//		kid2->true = NULL;*/
-//
-//		char s1[100000], s2[100000];
-//		strncpy(s1, bool, strlen(bool) / 2);
-//		s1[strlen(bool) / 2] = '\0';
-//		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
-//		s2[strlen(bool) / 2] = '\0';
-//		
-//		parent->right = buildBDD(kid1, s1, lvl+1, hashtable, one, zero);
-//		parent->left = buildBDD(kid2, s2, lvl+1, hashtable, one, zero);
-//		
-//		if (parent->right == parent->left) {
-//			//zmaze a rodic parenta bude ukazovat na dieta 
-//			parent->right->parent = parent->parent;
-//			if (parent->parent->right == parent)
-//				parent->parent->right = parent->right;
-//			else
-//				parent->parent->left = parent->right;
-//		}
-//		else {
-//			
-//			h = findHashIndex(parent, &hashtable, lvl, h_size);
-//			if (h != -1)
-//				hashInsert(parent, hashtable,h, lvl);
-//			else {
-//				parent->right->parent = parent->parent;
-//				if (parent->parent->right == parent)
-//					parent->parent->right = parent->right;
-//				else
-//					parent->parent->left = parent->right;
-//			}
-//		}
-//
-//		
-//		return parent;
-//	}
-//	else {
-//		//TODO
-//		NODE* kid = malloc(sizeof(NODE));
-//		kid->lvl = lvl;
-//		kid->parent = parent;
-//		/*kid->left = NULL;
-//		kid->right = NULL;*/
-//		
-//		//[0] je nalavo cize false
-//		if (bool[0] == '0') {
-//			kid->false = zero;
-//		}
-//		else {
-//			kid->false = one;
-//		}
-//
-//		//[1] je napravo cize true
-//		if (bool[1] == '0') { 
-//			kid->true = zero;
-//		}
-//		else {
-//			kid->true = one;
-//		}
-//
-//		return kid;
-//	}
-//
-//}
+NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side) {
+	int h, h_size = pow(2, lvl), flag;
+	parent->lvl = lvl;
+	NODE* buf;
+
+
+	if (strlen(bool) > 2) {
+		NODE* kid1 = malloc(sizeof(NODE));
+		NODE* kid2 = malloc(sizeof(NODE));
+
+		kid1->parent = parent;
+		kid2->parent = parent;
+		kid1->visit = 0;
+		kid2->visit = 0;
+
+		char s1[BUFF_STRINGSIZE], s2[BUFF_STRINGSIZE];
+		strncpy(s1, bool, strlen(bool) / 2);
+		s1[strlen(bool) / 2] = '\0';
+		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
+		s2[strlen(bool) / 2] = '\0';
+
+		parent->right = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
+		parent->left = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
+
+		return parent;
+	}
+	else {
+		
+
+		NODE* kid = malloc(sizeof(NODE));
+		kid->lvl = lvl;
+		kid->parent = parent;
+
+		kid->visit = 0;
+
+
+		//[0] je nalavo cize false
+		if (bool[0] == '0') {
+			kid->left = zero;
+		}
+		else {
+			kid->left = one;
+		}
+
+		//[1] je napravo cize true
+		if (bool[1] == '0') {
+			kid->right = zero;
+		}
+		else {
+			kid->right = one;
+		}
+
+		return kid;
+
+
+	}
+
+}
 
