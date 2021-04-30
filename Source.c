@@ -24,32 +24,80 @@ NODE** init(char* bool);
 void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl);
 int findHashIndex(NODE* node, NODE*** hashtable, int lvl, int h_size, int *flag);
 int getNodesCount(NODE* start);
+void testResults(NODE* reduced, NODE* full, char* s);
+char* incBinaryString(char* string);
 
 int main() {
 
 	int i, one=1,zero=0, *buf, *bas;
 	bas = &one;
 
+	char s[] = "11010001101011010001101011010001101000111101000110101101000110101101000110100011001111010001101011010001101011010001101000110011110100011010001100111101000110100011001100111101101000110101101000110101101000110100011110100011010110100011010110100011010001100111101000110101101000110101101000110100011001111010001101000110011110100011010001100110011110100011010110100011010110100011010001100111101000110100011001111010001101000110011100011010110100011010110100011010001100111101000110100011001111010001101000110011";
 	
+	//11010001101011010001101011010001101000111101000110101101000110101101000110100011001111010001101011010001101011010001101000110011110100011010001100111101000110100011001100111101101000110101101000110101101000110100011110100011010110100011010110100011010001100111101000110101101000110101101000110100011001111010001101000110011110100011010001100110011110100011010110100011010110100011010001100111101000110100011001111010001101000110011100011010110100011010110100011010001100111101000110100011001111010001101000110011
+	//1101000110100011
 
-	NODE** hashtable= init("11110001111110011100110101010111100011111100111001101010101001111000111111001110011010101010010011110001111110011100110101010100");
+	NODE** hashtable= init(s);
 	NODE* a, * b, * c, * d;
 	
-
+	printf("********%f\n", log2(strlen(s)) );
 	NODE* start = malloc(sizeof(NODE));
 	NODE* BDDstart = malloc(sizeof(NODE));
-	BDDstart = buildBDD(BDDstart, "11110001111110011100110101010111100011111100111001101010101001111000111111001110011010101010010011110001111110011100110101010100", 0, &hashtable, &one, &zero, NULL);
+	BDDstart = buildBDD(BDDstart, s, 0, &hashtable, &one, &zero, NULL);
 	
-	start = buildROBDD(start, "11110001111110011100110101010111100011111100111001101010101001111000111111001110011010101010010011110001111110011100110101010100", 0, &hashtable, &one, &zero, NULL);
+	start = buildROBDD(start, s, 0, &hashtable, &one, &zero, NULL);
+	a = hashtable[0][0].left;
+	b = hashtable[0][0].right;
 
 	printf("pocet buniek: %d\n",  getNodesCount(hashtable[0]));
 	printf("pocet buniek: %d\n",  getNodesCount(BDDstart));
 
+	getResult(hashtable[0], "1001");
 
-	//getResult(hashtable[0], "1111");
+	getResult(BDDstart, "1001");
 
-	printf("ds");
+	testResults(hashtable[0], BDDstart, s);
+
+	//printf("%d %d\n",getResult(hashtable[0], "1101111") , getResult(BDDstart, "1101111"));
+	//getResult(BDDstart, "1101100");
+	printf("end");
 	return 0;
+}
+
+void testResults(NODE * reduced, NODE * full, char* s) {
+	int i,log = log2(strlen(s));
+	char* key = malloc(sizeof(char) * log);
+	
+	for (i = 0; i < log; i++)
+		key[i] = '0';
+	key[i] = '\0';
+
+	for (i = 0; i < pow(2, log); i++) {
+		strcpy(key, incBinaryString(key));
+		//printf("%s\n", key );
+		if (getResult(reduced, key) != getResult(full, key)) {
+			printf("%s reduced: %d - full: %d\n",key, getResult(reduced, key), getResult(full, key));
+
+		}
+	}
+
+	
+}
+
+char* incBinaryString(char* string) {
+	int i, len = strlen(string);
+	char* buff = malloc(len * sizeof(char));
+	strcpy(buff, string);
+	
+	for (i = len - 1; i >= 0; i--) {
+		if (buff[i] == '0') {
+			buff[i] = '1';
+			return buff;
+		}
+
+		buff[i] = '0';
+	}
+	return buff;
 }
 
 int getNodesCount(NODE* start) {
@@ -82,17 +130,84 @@ NODE** init(char* bool) {
 
 	return hashtable;
 }
-
 int getResult(NODE* parent, char* bool) {
-	int *x;
+	int* x = parent, sub;
+	NODE* a;
+	if (*x == 1 || *x == 0)
+		return *x;
+
+
+
+
+	if (bool[parent->lvl] == '1') {
+		a = parent->right;
+		x = parent->right;
+		if ((*x == 1 || *x == 0) && parent->lvl != (strlen(bool) - 2)) {
+
+			if (bool[strlen(bool) - 2] == '1')
+				x = parent->right;
+			else
+				x = parent->left;
+
+			return getResult(x, bool);
+		}
+		
+		sub = a->lvl - parent->lvl;
+
+		//TODO lepsie otestovat
+		if (sub > 1) {
+			if (bool[parent->lvl + sub -1] == '1') 
+				x = parent->right;
+			else
+				x = parent->left;
+
+			return getResult(x, bool);
+		}
+		
+	}
+	else {
+		a = parent->right;
+		x = parent->left;
+
+		if ((*x == 1 || *x == 0) && parent->lvl != (strlen(bool) - 2)) {
+
+			if (bool[strlen(bool) - 2] == '1')
+				x = parent->right;
+			else
+				x = parent->left;
+
+			return getResult(x, bool);
+		}
+
+		sub = a->lvl - parent->lvl;
+
+		if (sub > 1) {
+			if (bool[parent->lvl + sub-1] == '1')
+				x = parent->right;
+			else
+				x = parent->left;
+
+
+			return getResult(x, bool);
+		}
+	}
+
+	return getResult(x, bool);
+}
+
+int getResult_(NODE* parent, char* bool) {
+	int* x;
+
 
 	if (bool[parent->lvl] == '1') {
 		x = parent->right;
+		
 		if (*x == 1 || *x == 0)
 			return *x;
 	}
 	else {
 		x = parent->left;
+		
 		if (*x == 1 || *x == 0)
 			return *x;
 	}
@@ -124,7 +239,7 @@ int findHashIndex(NODE* node, NODE*** hashtable, int lvl, int h_size, int *flag)
 	}
 	NODE a = (*hashtable)[lvl][h];
 
-	printf("%d %d\n", (*hashtable)[lvl][h].lvl, a.lvl);
+	//printf("%d %d\n", (*hashtable)[lvl][h].lvl, a.lvl);
 	while ((*hashtable)[lvl][h].lvl != -1) {
 		if ((*hashtable)[lvl][h].left == node->left && (*hashtable)[lvl][h].right == node->right) {
 			*flag = h;
@@ -170,12 +285,13 @@ NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one,
 		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
 		s2[strlen(bool) / 2] = '\0';
 
-		parent->right = buildROBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
-		parent->left = buildROBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
+		//test switched right - left
+		parent->left = buildROBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
+		parent->right = buildROBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
 
 		if (parent->right == parent->left) {
 			//zmaze a rodic parenta bude ukazovat na dieta 
-	
+			//printf("%s %s\n", s1, s2);
 			if (parent->right != one && parent->right != zero) {
 				buf = parent->right;
 				//buf->parent = parent->parent;
@@ -187,8 +303,8 @@ NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one,
 				hashInsert(parent, hashtable, 0, lvl);
 			}
 
-			return parent->right;
-			
+			//return parent->right;
+			return parent;
 		}
 		else {
 			flag = 1;
@@ -280,10 +396,9 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		s1[strlen(bool) / 2] = '\0';
 		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
 		s2[strlen(bool) / 2] = '\0';
-		printf("%s\n", s1);
 
-		parent->right = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
-		parent->left = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
+		parent->left = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
+		parent->right = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
 
 		return parent;
 	}
