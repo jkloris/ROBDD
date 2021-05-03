@@ -17,10 +17,16 @@ typedef struct node{
 
 }NODE;
 
-NODE* buildBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side);
-NODE* buildROBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side);
-int getResult(NODE** parent, char* bool);
-int getResult_(NODE** parent, char* bool);//tmp
+typedef struct bdd {
+	NODE* head;
+	int size;
+	int vars;
+}BDD;
+
+NODE* buildBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side, int* size);
+NODE* buildROBDD(NODE** parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side, int* size);
+int BDD_use(NODE** parent, char* bool);
+int BDD_use_(NODE** parent, char* bool);//tmp
 int getHash(void* ptr);
 NODE** init(char* bool);
 void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl);
@@ -32,40 +38,71 @@ int testDecidingTime(NODE* tree, char* s);
 
 char* generateRandVector(int size, int a);
 char* generateVector(int size, int a);
-void overalTesting(NODE* reducedTree, NODE* fullTree, char* s);
+void overalTesting(BDD* robdd, BDD* bdd, char* s);
+
+BDD* ROBDD_create(char* BF, int* one, int* zero);
+BDD* BDD_create(char* BF, int* one, int* zero);
+
 
 int main() {
 	srand(time(NULL));
-	int i, one = 1, zero = 0;
+	int i, one = 1, zero = 0, size = 0, size2 = 2;
 	NODE* a;
 
-	//char* s = generateRandVector(pow(2, 14), 0);
-	char* s = generateVector(pow(2, 18), 4);
+	// char* s = generateRandVector(pow(2, 18), 0);
+	char* s = generateVector(pow(2, 14), 2);
 
-	NODE** hashtable= init(s);
-	
 	printf("********%f\n", log2(strlen(s)) );
-	NODE* start = malloc(sizeof(NODE));
-	NODE* BDDstart = malloc(sizeof(NODE));
-	
-	BDDstart = buildBDD(BDDstart, s, 0, &hashtable, &one, &zero, NULL);
-	buildROBDD(start, s, 0, &hashtable, &one, &zero, NULL);
-	
+	//buildROBDD(start, s, 0, &hashtable, &one, &zero, NULL, &size2);
 
-	overalTesting(hashtable[0], BDDstart, s);
+	BDD * robdd = ROBDD_create(s, &one, &zero);
+	BDD* bdd = BDD_create(s, &one, &zero);
+	printf("..Building finished\n\nTesting..\n");
+
+	overalTesting(robdd, bdd, s);
 
 
 	
-	printf("end");
+	printf("End");
 	return 0;
 }
 
-void overalTesting(NODE* reducedTree, NODE* fullTree, char *s) {
-	int i, msR = 0, msF = 0;
-	int tests = 20;
+BDD* ROBDD_create(char *BF, int* one, int* zero) {
+	int i, size = 2;
+	NODE** hashtable = init(BF);
+	NODE* start = malloc(sizeof(NODE));;
+	BDD* bdd = malloc(sizeof(BDD));
 
-	printf("Redukovany | pocet buniek: %d\n", getNodesCount(reducedTree) + 2);
-	printf("BDD | pocet buniek: %d\n", getNodesCount(fullTree)*2 + 1 );
+	buildROBDD(start, BF, 0, &hashtable, one, zero, NULL, &size);
+	bdd->head = hashtable[0];
+	bdd->size = size;
+	bdd->vars = log2(strlen(BF));
+	
+	return bdd;
+}
+
+BDD* BDD_create(char* BF, int* one, int* zero) {
+	int i, size = 0;
+	NODE** hashtable = init(BF);
+	NODE* start = malloc(sizeof(NODE));;
+	BDD* bdd = malloc(sizeof(BDD));
+
+	start = buildBDD(start, BF, 0, &hashtable, one, zero, NULL, &size);
+	bdd->head = start;
+	bdd->size = size;
+	bdd->vars = log2(strlen(BF));
+
+	return bdd;
+}
+
+void overalTesting(BDD * robdd, BDD* bdd, char *s) {
+	int i, msR = 0, msF = 0;
+	int tests = 10;
+	NODE *reducedTree = robdd->head;
+	NODE *fullTree = bdd->head;
+	printf("Redukovany | pocet buniek: %d\n", robdd->size);
+	printf("BDD | pocet buniek: %d\n", bdd->size);
+	printf("Percentualna miera zredukovania: %.2f%%\n", 100 - (float)robdd->size / bdd->size * 100);
 
 	testResults(reducedTree, fullTree, s);
 
@@ -129,8 +166,8 @@ void testResults(NODE * reduced, NODE * full, char* s) {
 	for (i = 0; i < pow(2, log); i++) {
 		strcpy(key, incBinaryString(key));
 		//printf("%s\n", key );
-		if (getResult_(reduced, key) != getResult_(full, key)) {
-			printf("ERROR %s reduced: %d - full: %d\n",key, getResult_(reduced, key), getResult_(full, key));
+		if (BDD_use_(reduced, key) != BDD_use_(full, key)) {
+			printf("ERROR %s reduced: %d - full: %d\n",key, BDD_use_(reduced, key), BDD_use_(full, key));
 
 		}
 	}
@@ -150,7 +187,7 @@ int testDecidingTime(NODE* tree, char*s) {
 	for (i = 0; i < pow(2, log); i++) {
 		strcpy(key, incBinaryString(key));
 		past = clock();
-		getResult(tree, key);
+		BDD_use(tree, key);
 		dt += clock() - past;
 	}
 	
@@ -210,7 +247,7 @@ NODE** init(char* bool) {
 }
 
 //vrati vyslednu hodnotu rovnice podla kluca (bool)
-int getResult(NODE* parent, char* bool) {
+int BDD_use(NODE* parent, char* bool) {
 	int* x = parent, sub;
 	NODE* a;
 	if (*x == 1 || *x == 0)
@@ -227,11 +264,11 @@ int getResult(NODE* parent, char* bool) {
 
 	}
 
-	return getResult(x, bool);
+	return BDD_use(x, bool);
 }
 
 //kontrolna verzia, tmp
-int getResult_(NODE* parent, char* bool) {
+int BDD_use_(NODE* parent, char* bool) {
 	int* x;
 
 
@@ -248,7 +285,7 @@ int getResult_(NODE* parent, char* bool) {
 			return *x;
 	}
 	
-	getResult_(x, bool);
+	BDD_use_(x, bool);
 }
 
 //vrati hash z pointra
@@ -300,7 +337,7 @@ void hashInsert(NODE* node, NODE*** hashtable, int h, int lvl) {
 }
 
 //vytvor redukovany diagram
-NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side) {
+NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side, int * size) {
 	int h, h_size = pow(2, lvl), flag ;
 	parent->lvl = lvl;
 	NODE* buf;
@@ -323,8 +360,8 @@ NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one,
 		s2[strlen(bool) / 2] = '\0';
 
 		//test switched right - left
-		parent->left = buildROBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
-		parent->right = buildROBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
+		parent->left = buildROBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R',size);
+		parent->right = buildROBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L',size);
 
 		if (parent->right == parent->left) {
 			//zmaze a rodic parenta bude ukazovat na dieta 
@@ -345,7 +382,7 @@ NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one,
 			//takyto prvok v zozname nie je
 			if (h != -1) {
 				hashInsert(parent, hashtable, h, lvl);
-
+				(*size) += 1;
 				return &(*hashtable)[lvl][h];
 			}
 
@@ -382,7 +419,6 @@ NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one,
 		}
 
 		if (kid->right == kid->left) {
-			
 			return kid->right;
 		}
 		
@@ -392,10 +428,11 @@ NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one,
 		//takyto prvok v zozname nie je
 		if (h != -1) {
 			hashInsert(kid, hashtable, h, lvl);
-
+			(*size) += 1;
 			return &(*hashtable)[lvl][h];
 		}
 
+		
 		return &(*hashtable)[lvl][flag];
 
 		
@@ -404,7 +441,7 @@ NODE* buildROBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one,
 }
 
 //vytvori neredukovany rozhodovaci diagram
-NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side) {
+NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, int* zero, char side, int* size) {
 	
 	
 	int h, h_size = pow(2, lvl), flag;
@@ -427,9 +464,10 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		strncpy(s2, bool + strlen(bool) / 2, strlen(bool) - strlen(bool) / 2);
 		s2[strlen(bool) / 2] = '\0';
 
-		parent->left = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R');
-		parent->right = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L');
+		parent->left = buildBDD(kid1, s1, lvl + 1, hashtable, one, zero, 'R', size);
+		parent->right = buildBDD(kid2, s2, lvl + 1, hashtable, one, zero, 'L', size);
 
+		(*size) += 1;
 		return parent;
 	}
 	else {
@@ -457,6 +495,8 @@ NODE* buildBDD(NODE* parent, char* bool, int lvl, NODE*** hashtable, int* one, i
 		else {
 			kid->right = one;
 		}
+
+		(*size) += 3;
 
 		return kid;
 
